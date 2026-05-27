@@ -6,10 +6,76 @@
 #include <iostream>
 using namespace std;
 
+// janela do jogo e frames.
 constexpr int WINDOW_WIDTH = 1280;
 constexpr int WINDOW_HEIGHT = 720;
 constexpr int FPS = 60;
 constexpr int TIME_FRAME_MS = 1000 / FPS;
+
+// tiles da fazenda.
+constexpr int TILE_WIDTH = 64;
+constexpr int TILE_HEIGHT = 32;
+
+// grid da fazenda.
+constexpr int GRID_COLUMNS = 7;
+constexpr int GRID_ROWS = 5;
+
+// centraliza a fazenda na janela.
+constexpr int OFFSET_X = WINDOW_WIDTH / 2;
+constexpr int OFFSET_Y = 200;
+
+// canteiros iniciais.
+constexpr int INITIAL_SITES = 6;
+
+// onde os tiles da fazendo vão renderizar em x e y.
+int isoScreenX(int column, int row) {
+  return (column - row) * (TILE_WIDTH / 2) + OFFSET_X;
+}
+int isoScreenY(int column, int row) {
+  return (column + row) * (TILE_HEIGHT / 2) + OFFSET_Y;
+}
+
+// posição da coluna em que o mouse clicou.
+float screenGridColumn(int mouseX, int mouseY) {
+  float relX = (float)(mouseX - OFFSET_X); 
+  float relY = (float)(mouseY - OFFSET_Y);
+
+  return (relX / (TILE_WIDTH / 2.0f) + relY / (TILE_HEIGHT / 2.0f)) / 2.0f;
+}
+
+// posição da linha em que o mouse clicou.
+float screenGridRow(int mouseX, int mouseY) {
+  float relX = (float)(mouseX - OFFSET_X); 
+  float relY = (float)(mouseY - OFFSET_Y);
+
+  return (relY / (TILE_HEIGHT / 2.0f) + relX / (TILE_HEIGHT / 2.0f)) / 2.0f;
+}
+
+enum siteStatus {
+  BLOCKED = 0,
+  EMPTY = 1,
+  PLANTED = 2,
+  RIPE = 3,
+  REMAINS = 4
+};
+
+struct Site {
+  int column;
+  int row;
+  siteStatus status;
+};
+
+// desenha o losango.
+void drawFilledDiamond(SDL_Renderer* renderer, int centerX, int centerY,
+int r, int g, int b, int width = TILE_WIDTH, int height = TILE_HEIGHT) {
+  SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+
+  for (int dy =-height / 2; dy <= height; dy++) {
+    int halfWidth = (height / 2 - abs(dy)) * width / height;
+    SDL_RenderDrawLine(renderer, centerX - halfWidth, centerY + dy, centerX + halfWidth,
+    centerY - dy);
+  }
+}
 
 int main(int agrc, char* agrv[]) {
   // checa se o áudio ou vídeo incializam.
