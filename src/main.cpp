@@ -52,7 +52,7 @@ float screenGridRow(int mouseX, int mouseY) {
 }
 
 enum siteStatus {
-  BLOCKED = 0,
+  LOCKED = 0,
   EMPTY = 1,
   PLANTED = 2,
   RIPE = 3,
@@ -68,13 +68,35 @@ struct Site {
 // desenha o losango.
 void drawFilledDiamond(SDL_Renderer* renderer, int centerX, int centerY,
 int r, int g, int b, int width = TILE_WIDTH, int height = TILE_HEIGHT) {
-  SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+  SDL_SetRenderDrawColor(renderer, r, g, b, 255); // cor do losango.
 
   for (int dy =-height / 2; dy <= height; dy++) {
     int halfWidth = (height / 2 - abs(dy)) * width / height;
     SDL_RenderDrawLine(renderer, centerX - halfWidth, centerY + dy, centerX + halfWidth,
     centerY - dy);
   }
+}
+
+// desenha o contorno do losango.
+void drawOutlineDiamond(SDL_Renderer* renderer, int centerX, int centerY,
+int r, int g, int b, int width = TILE_WIDTH, int height = TILE_HEIGHT) {
+  int topX = centerX;
+  int topY = centerY - height / 2;
+
+  int rightX = centerX + width / 2;
+  int rightY = centerY / 2;
+
+  int leftX = centerX;
+  int leftY = centerY / 2;
+
+  int bottomX = centerX - width / 2;
+  int bottomY = centerY;
+
+  SDL_SetRenderDrawColor(renderer, r, g, b, 255); // cor do contorno.
+  SDL_RenderDrawLine(renderer, topX, topY, rightX, rightY);
+  SDL_RenderDrawLine(renderer, rightX, rightY, bottomX, bottomY);
+  SDL_RenderDrawLine(renderer, bottomX, bottomY, leftX, leftY);
+  SDL_RenderDrawLine(renderer, leftX, leftY, topX, topY);
 }
 
 int main(int agrc, char* agrv[]) {
@@ -144,10 +166,28 @@ int main(int agrc, char* agrv[]) {
     return 1;
   }
 
+  array<Site, GRID_COLUMNS * GRID_ROWS> sites;
+  int unlocked = 0;
+
+  for (int row = 0; row < GRID_ROWS; row++) {
+    for (int column = 0; column < GRID_COLUMNS; column++) {
+      int index = row * GRID_COLUMNS + column;
+      sites[index].column = column;
+      sites[index].row = row;
+      sites[index].status = (unlocked < INITIAL_SITES) ? EMPTY : LOCKED;
+      if (unlocked < INITIAL_SITES) unlocked++;
+    }
+  }
+
+  cout << "Fazenda: " << GRID_COLUMNS << "x" << GRID_ROWS << "(" << INITIAL_SITES << "desbloqueados)" << endl;
+
   bool is_running = true;
   SDL_Event event; // controla todos os eventos.
   Uint32 previous_time = SDL_GetTicks(); // pega todo o tempo desde a inicialização.
   float deltaTime = 0.0f;
+  int siteHover = -1; // canteiro onde o mouse está em cima.
+  int mouseX = 0;
+  int mouseY = 0;
 
   while (is_running) {
     Uint32 current_time = SDL_GetTicks();
@@ -158,6 +198,27 @@ int main(int agrc, char* agrv[]) {
     while (SDL_PollEvent(&event)) {
       if (event.type == SDL_QUIT) {
         is_running = false;
+      }
+
+      // guarda os valores de onde mouse está.
+      if (event.type == SDL_MOUSEMOTION) {
+        mouseX = event.motion.x;
+        mouseY = event.motion.y;
+      }
+
+      // passando o mouse sobre o canteiro e passando o estado dele.
+      if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
+        if (siteHover >= 0) {
+          Site& s = sites[siteHover];
+          cout << "Clique (" << s.column << "," << s.row << ")" << endl;
+          switch (s.status) {
+            case LOCKED: cout << "BLOQUEADO" << endl; break;
+            case EMPTY: cout << "VAZIO" << endl; break;
+            case PLANTED: cout << "PLANTADO" << endl; break;
+            case RIPE: cout << "MADURO" << endl; break;
+            case REMAINS: cout << "RESTOS" << endl; break;
+          }
+        }
       }
 
       if (event.type == SDL_KEYDOWN) {
